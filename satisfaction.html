@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบประเมินความพึงพอใจ - โรงพยาบาลเสลภูมิ</title>
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Noto Sans Thai Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* ปรับโทนสีเป็นสีชมพูสดใส ทันสมัย */
+            --primary-color: #e83e8c; 
+            --primary-dark: #c2185b;
+            --secondary-color: #6f42c1;
+            --accent-color: #ffc107;
+            /* พื้นหลังไล่เฉดสีชมพูอ่อน-ม่วงพาสเทล */
+            --bg-gradient: linear-gradient(135deg, #fff0f3 0%, #e0c3fc 100%);
+            --card-glass: rgba(255, 255, 255, 0.92);
+        }
+
+        body {
+            font-family: 'Noto Sans Thai', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(232, 62, 140, 0.15);
+        }
+
+        .brand-text {
+            /* Text Gradient สีชมพู-ม่วง */
+            background: linear-gradient(45deg, #e83e8c, #6610f2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 10px rgba(232, 62, 140, 0.4);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+
+        .card-custom {
+            background: var(--card-glass);
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card-custom:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(232, 62, 140, 0.15);
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .rating-group {
+            display: flex;
+            justify-content: space-between;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        .rating-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            background: white;
+            color: #555;
+            font-size: 1.1rem;
+        }
+
+        .rating-btn.active, .rating-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: scale(1.15);
+            box-shadow: 0 0 10px rgba(232, 62, 140, 0.5);
+        }
+
+        .section-header {
+            border-left: 5px solid var(--primary-color);
+            padding-left: 15px;
+            margin-bottom: 20px;
+            color: #c2185b;
+            font-weight: 700;
+        }
+        
+        /* Table Styling */
+        .table-custom th {
+            background-color: rgba(232, 62, 140, 0.1);
+            color: var(--primary-dark);
+        }
+
+        /* Chart Container sizing */
+        .chart-container-small {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+        .chart-container-medium {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Loading Overlay */
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.8); z-index: 9999;
+            display: none; justify-content: center; align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading -->
+    <div id="loadingOverlay">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#" onclick="showPage('dashboard')">
+                <i class="fa-solid fa-heart-pulse me-2 text-primary"></i>
+                <span class="brand-text">รพ.เสลภูมิ</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link fw-bold" href="#" onclick="showPage('dashboard')">
+                            <i class="fa-solid fa-chart-pie"></i> ภาพรวม
+                        </a>
+                    </li>
+                    <li class="nav-item mx-2">
+                        <!-- ปุ่มประเมินใน Navbar เด่นขึ้น -->
+                        <a class="btn btn-primary btn-sm rounded-pill px-3 fw-bold text-white" href="#" onclick="showPage('assessment')">
+                            <i class="fa-solid fa-clipboard-check"></i> ทำแบบประเมิน
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-bold" href="#" onclick="handleAdminClick()">
+                            <i class="fa-solid fa-user-shield"></i> ผู้ดูแลระบบ
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 90px; padding-bottom: 50px;">
+
+        <!-- === PAGE: DASHBOARD === -->
+        <div id="dashboardPage">
+            
+            <!-- ส่วนที่ 1: ปุ่มประเมินอยู่ด้านบนสุด -->
+            <div class="row mb-4 justify-content-center text-center">
+                <div class="col-lg-8">
+                    <h1 class="fw-bold brand-text mb-2">โรงพยาบาลเสลภูมิ</h1>
+                    <p class="text-muted mb-4">"มุ่งเน้นบริการ ดุจญาติมิตร ด้วยความทันสมัยและใส่ใจ"</p>
+                    <button class="btn btn-lg btn-primary rounded-pill px-5 py-3 shadow-lg fs-4 fw-bold" onclick="showPage('assessment')">
+                         <i class="fa-solid fa-hand-holding-heart me-2"></i> เข้าสู่แบบประเมินความพึงพอใจ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Section (NEW) -->
+            <div class="card-custom p-3 mb-4 border-start border-5 border-warning">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="m-0 text-secondary fw-bold"><i class="fa-solid fa-filter text-warning"></i> กรองข้อมูล (Filter)</h5>
+                    <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="resetFilters()">
+                        <i class="fa-solid fa-times-circle"></i> ล้างตัวกรอง
+                    </button>
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label class="small text-muted mb-1">เพศ</label>
+                        <select id="filterGender" class="form-select form-select-sm" onchange="applyFilters()">
+                            <option value="">ทั้งหมด</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small text-muted mb-1">แผนก</label>
+                        <select id="filterClinic" class="form-select form-select-sm" onchange="applyFilters()">
+                            <option value="">ทั้งหมด</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="small text-muted mb-1">สิทธิ์การรักษา</label>
+                        <select id="filterRight" class="form-select form-select-sm" onchange="applyFilters()">
+                            <option value="">ทั้งหมด</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="small text-muted mb-1">ความถี่</label>
+                        <select id="filterFreq" class="form-select form-select-sm" onchange="applyFilters()">
+                            <option value="">ทั้งหมด</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="small text-muted mb-1">อาชีพ</label>
+                        <select id="filterOcc" class="form-select form-select-sm" onchange="applyFilters()">
+                            <option value="">ทั้งหมด</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-3 align-items-end">
+                <div class="col-md-6">
+                    <h4 class="fw-bold text-secondary"><i class="fa-solid fa-chart-line text-primary"></i> สรุปผลสถิติ (Real-time)</h4>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="refreshData()">
+                        <i class="fa-solid fa-sync"></i> อัปเดตข้อมูล
+                    </button>
+                    <button class="btn btn-success btn-sm rounded-pill ms-2" onclick="exportToWord()">
+                        <i class="fa-solid fa-file-word"></i> Export Word
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card-custom stat-card">
+                        <div class="text-muted">ผู้ตอบแบบสอบถาม</div>
+                        <div class="stat-value" id="totalRespondents">0</div>
+                        <div>คน</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-custom stat-card">
+                        <div class="text-muted">คะแนนเฉลี่ยรวม</div>
+                        <div class="stat-value text-warning" id="overallScore">0.00</div>
+                        <div>เต็ม 5.00</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                     <div class="card-custom stat-card">
+                        <div class="text-muted">ความพึงพอใจสูงสุด</div>
+                        <div class="stat-value text-success" id="maxSatisfaction">-</div>
+                        <div id="maxSatisfactionTopic" style="font-size: 0.9rem;">ด้าน...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row g-4" id="reportContent">
+                <!-- Main Score Chart -->
+                <div class="col-12">
+                    <div class="card-custom p-4">
+                        <h5 class="mb-4 text-primary fw-bold">คะแนนเฉลี่ยรายด้าน (5 มิติ)</h5>
+                        <div style="height: 350px; position: relative;">
+                            <canvas id="mainChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Demographic Charts -->
+                <div class="col-md-6 col-lg-3">
+                    <div class="card-custom p-3">
+                        <h6 class="text-center text-secondary fw-bold mb-3">เพศ (Gender)</h6>
+                        <div class="chart-container-small">
+                            <canvas id="genderChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card-custom p-3">
+                        <h6 class="text-center text-secondary fw-bold mb-3">สิทธิ์การรักษา (Rights)</h6>
+                        <div class="chart-container-small">
+                            <canvas id="rightsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12 col-lg-6">
+                     <div class="card-custom p-3">
+                        <h6 class="text-center text-secondary fw-bold mb-3">ความถี่ในการใช้บริการ (Frequency)</h6>
+                        <div class="chart-container-small">
+                            <canvas id="freqChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card-custom p-3">
+                        <h6 class="text-center text-secondary fw-bold mb-3">แผนกที่ใช้บริการ (Clinic)</h6>
+                        <div class="chart-container-medium">
+                            <canvas id="clinicChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card-custom p-3">
+                        <h6 class="text-center text-secondary fw-bold mb-3">อาชีพ (Top 5 Occupations)</h6>
+                        <div class="chart-container-medium">
+                            <canvas id="occChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Table Summary -->
+                <div class="col-12">
+                    <div class="card-custom p-4">
+                        <h5 class="mb-3 text-primary fw-bold"><i class="fa-solid fa-users"></i> สรุปข้อมูลส่วนบุคคลผู้รับบริการ (ตาราง)</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-custom" id="demographicTable">
+                                <!-- JS will populate full details -->
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Login Button -->
+             <div class="text-center mt-5 mb-5">
+                <hr class="w-50 mx-auto text-muted">
+                <p class="text-muted small">สำหรับเจ้าหน้าที่ / ผู้ดูแลระบบ</p>
+                <button class="btn btn-outline-secondary rounded-pill px-4" onclick="handleAdminClick()">
+                    <i class="fa-solid fa-lock me-2"></i> เข้าสู่ระบบเจ้าหน้าที่ (Staff Login)
+                </button>
+            </div>
+
+        </div>
+
+        <!-- === PAGE: ASSESSMENT FORM === -->
+        <div id="assessmentPage" style="display: none;">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="card-custom p-4 p-md-5 border-top border-5 border-primary">
+                        <div class="text-center mb-5">
+                            <h2 class="text-primary fw-bold mb-2">แบบประเมินความพึงพอใจ</h2>
+                            <h5 class="text-secondary">โรงพยาบาลเสลภูมิ (Selaphum Hospital)</h5>
+                        </div>
+                        
+                        <form id="surveyForm" onsubmit="submitForm(event)">
+                            
+                            <!-- Part 1: Personal Info -->
+                            <h4 class="section-header">ส่วนที่ 1: ข้อมูลทั่วไป (Personal Data)</h4>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">เพศ</label>
+                                    <select class="form-select" name="gender" required>
+                                        <option value="">เลือก...</option>
+                                        <option value="ชาย">ชาย</option>
+                                        <option value="หญิง">หญิง</option>
+                                        <option value="ทางเลือก">ทางเลือก</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">อายุ</label>
+                                    <input type="number" class="form-control" name="age" placeholder="ระบุตัวเลข (ปี)" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">แผนกที่เข้าใช้บริการ</label>
+                                    <select class="form-select" name="clinic" required>
+                                        <option value="">เลือก...</option>
+                                        <option value="ผู้ป่วยนอก(OPD)">ผู้ป่วยนอก(OPD)</option>
+                                        <option value="ผู้ป่วยใน(IPD)">ผู้ป่วยใน(IPD)</option>
+                                        <option value="ทันตกรรม">ทันตกรรม</option>
+                                        <option value="กายภาพบำบัด">กายภาพบำบัด</option>
+                                        <option value="ฉุกเฉิน(ER)">ฉุกเฉิน(ER)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">ความถี่ในการใช้บริการ</label>
+                                    <select class="form-select" name="frequency" required>
+                                        <option value="ครั้งแรก">ครั้งแรก</option>
+                                        <option value="นานๆครั้ง">นานๆครั้ง (1-2 ครั้ง/ปี)</option>
+                                        <option value="บ่อยครั้ง">บ่อยครั้ง (>3 ครั้ง/ปี)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">สิทธิ์การรักษา</label>
+                                    <select class="form-select" name="rightType" required>
+                                        <option value="บัตรทอง">บัตรทอง (30 บาท)</option>
+                                        <option value="ประกันสังคม">ประกันสังคม</option>
+                                        <option value="ข้าราชการ">ข้าราชการ/รัฐวิสาหกิจ</option>
+                                        <option value="ชำระเงินเอง">ชำระเงินเอง</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">อาชีพ</label>
+                                    <input type="text" class="form-control" name="occupation" placeholder="เช่น รับราชการ, ค้าขาย" required>
+                                </div>
+                            </div>
+
+                            <!-- Part 2: Assessment Questions -->
+                            <h4 class="section-header">ส่วนที่ 2: ระดับความพึงพอใจ</h4>
+                            <div class="alert alert-info border-0 shadow-sm" style="background-color: rgba(232, 62, 140, 0.1); color: var(--primary-dark);">
+                                <i class="fa-solid fa-star"></i> <strong>เกณฑ์การให้คะแนน:</strong> 5 = มากที่สุด, 4 = มาก, 3 = ปานกลาง, 2 = น้อย, 1 = น้อยที่สุด
+                            </div>
+                            
+                            <div id="questionsContainer"></div>
+
+                            <!-- Part 3: Comment -->
+                            <h4 class="section-header mt-4">ส่วนที่ 3: ข้อเสนอแนะเพิ่มเติม</h4>
+                            <div class="mb-3">
+                                <textarea class="form-control" name="comment" rows="3" placeholder="ความคิดเห็นของท่านมีค่าเพื่อการพัฒนา..."></textarea>
+                            </div>
+
+                            <div class="d-grid gap-2 mt-5">
+                                <button type="submit" class="btn btn-primary btn-lg rounded-pill shadow-lg py-3">
+                                    <i class="fa-solid fa-paper-plane me-2"></i> ส่งแบบประเมิน
+                                </button>
+                                <button type="button" class="btn btn-light text-muted rounded-pill mt-2" onclick="showPage('dashboard')">กลับหน้าหลัก</button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- === PAGE: ADMIN === -->
+        <div id="adminPage" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fa-solid fa-database text-danger"></i> ระบบจัดการข้อมูล (Admin)</h2>
+                <button class="btn btn-danger btn-sm" onclick="logout()">ออกจากระบบ</button>
+            </div>
+
+            <div class="card-custom p-3">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="adminTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>เวลา</th>
+                                <th>เพศ/อายุ</th>
+                                <th>แผนก</th>
+                                <th>สิทธิ์</th>
+                                <th>คะแนนเฉลี่ย</th>
+                                <th>ข้อเสนอแนะ</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Admin Data -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script Configuration -->
+    <script>
+        // ******************************************************
+        // IMPORTANT: Replace this with your Web App URL
+        // ******************************************************
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyJdCs7_ivrMYxot0dpQxycZr4vfzD8k9cO8xtRB9g8Av4cn-t_9T3NkivfuWbZmHO02A/exec"; 
+        
+        // --- Data Structure for Questions ---
+        const dimensions = [
+            {
+                name: "1. ด้านการเข้าถึงบริการ (Access)",
+                questions: ["เวลาเปิด-ปิดให้บริการเหมาะสม", "ป้ายบอกทางชัดเจน", "ระบบคิวเป็นระเบียบ", "ขั้นตอนไม่ยุ่งยาก", "จุดประชาสัมพันธ์ให้ข้อมูลชัดเจน"]
+            },
+            {
+                name: "2. ด้านความรวดเร็ว (Timeliness)",
+                questions: ["ความรวดเร็วในการลงทะเบียน", "ความรวดเร็วในการตรวจรักษา", "ความรวดเร็วในการชำระเงิน", "ความรวดเร็วในการรับยา", "ภาพรวมความรวดเร็ว"]
+            },
+            {
+                name: "3. ด้านบุคลากรผู้ให้บริการ (Personnel)",
+                questions: ["ให้บริการด้วยคำพูดสุภาพ", "มีความรู้ความชำนาญ", "ให้คำแนะนำชัดเจน", "ความกระตือรือร้นใส่ใจ", "การแต่งกายสุภาพเรียบร้อย"]
+            },
+            {
+                name: "4. ด้านสถานที่และความสะอาด (Facility)",
+                questions: ["ความสะอาดจุดพักคอย", "ความสะอาดห้องน้ำ", "อุปกรณ์ทางการแพทย์ทันสมัย", "ไม่มีกลิ่นรบกวน", "การจัดการขยะติดเชื้อ"]
+            },
+            {
+                name: "5. ด้านความมั่นใจ (Confidence)",
+                questions: ["ความมั่นใจในการวินิจฉัยโรค", "คุณภาพของยาและเวชภัณฑ์", "การรักษาความลับผู้ป่วย", "ความปลอดภัยในโรงพยาบาล", "ความเชื่อมั่นโดยรวมต่อโรงพยาบาล"]
+            }
+        ];
+
+        let globalData = [];
+        let isLoggedIn = false;
+
+        // --- Init ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderQuestions();
+            refreshData(); // Load data initially
+        });
+
+        // --- Navigation ---
+        function showPage(pageId) {
+            document.getElementById('dashboardPage').style.display = 'none';
+            document.getElementById('assessmentPage').style.display = 'none';
+            document.getElementById('adminPage').style.display = 'none';
+
+            if (pageId === 'dashboard') document.getElementById('dashboardPage').style.display = 'block';
+            if (pageId === 'assessment') document.getElementById('assessmentPage').style.display = 'block';
+            if (pageId === 'admin') document.getElementById('adminPage').style.display = 'block';
+            
+            window.scrollTo(0,0);
+        }
+
+        function handleAdminClick() {
+            if (isLoggedIn) {
+                showPage('admin');
+            } else {
+                Swal.fire({
+                    title: 'เข้าสู่ระบบผู้ดูแล',
+                    html: `<input type="text" id="swal-user" class="swal2-input" placeholder="Username">
+                           <input type="password" id="swal-pass" class="swal2-input" placeholder="Password">`,
+                    confirmButtonText: 'Login',
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        const u = Swal.getPopup().querySelector('#swal-user').value;
+                        const p = Swal.getPopup().querySelector('#swal-pass').value;
+                        return { username: u, password: p };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        login(result.value.username, result.value.password);
+                    }
+                });
+            }
+        }
+
+        // --- Render Form ---
+        function renderQuestions() {
+            const container = document.getElementById('questionsContainer');
+            let qIndex = 0;
+            
+            dimensions.forEach((dim, dIdx) => {
+                let html = `<div class="card card-body mb-4 border-0 shadow-sm" style="background-color: #fdf2f7;">
+                    <h5 class="text-primary fw-bold mb-3">${dim.name}</h5>`;
+                
+                dim.questions.forEach((q, qIdx) => {
+                    qIndex++;
+                    const name = `D${dIdx+1}_${qIdx+1}`; // D1_1, D1_2...
+                    html += `
+                        <div class="mb-3 border-bottom border-white pb-3">
+                            <p class="mb-2 fw-semibold">${qIndex}. ${q}</p>
+                            <div class="rating-group">
+                                ${[1,2,3,4,5].map(val => `
+                                    <label class="rating-btn" onclick="selectRating(this, '${name}')">
+                                        <input type="radio" name="${name}" value="${val}" class="d-none" required>
+                                        ${val}
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                container.innerHTML += html;
+            });
+        }
+
+        function selectRating(el, name) {
+            // Remove active class from siblings
+            const parent = el.parentNode;
+            parent.querySelectorAll('.rating-btn').forEach(btn => btn.classList.remove('active'));
+            el.classList.add('active');
+            // Check radio
+            el.querySelector('input').checked = true;
+        }
+
+        // --- API Calls ---
+        
+        async function refreshData() {
+            if(GAS_API_URL === "INSERT_YOUR_WEB_APP_URL_HERE") {
+               // Demo Mode if no URL
+               console.warn("No API URL. Running in UI Demo mode.");
+               return; 
+            }
+
+            toggleLoading(true);
+            try {
+                const response = await fetch(`${GAS_API_URL}?op=getData`);
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    globalData = result.data;
+                    populateFilters(globalData); // NEW: Init filters
+                    updateDashboard(globalData); // Show all initially
+                    updateAdminTable(globalData);
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ', 'error');
+            }
+            toggleLoading(false);
+        }
+
+        function submitForm(e) {
+            e.preventDefault();
+            if(GAS_API_URL === "INSERT_YOUR_WEB_APP_URL_HERE") {
+                Swal.fire('ตั้งค่า URL ก่อน', 'กรุณาใส่ Web App URL ใน Code', 'warning');
+                return;
+            }
+
+            const formData = new FormData(e.target);
+            const payload = {
+                personal: {
+                    gender: formData.get('gender'),
+                    age: formData.get('age'),
+                    clinic: formData.get('clinic'),
+                    frequency: formData.get('frequency'),
+                    rightType: formData.get('rightType'),
+                    occupation: formData.get('occupation')
+                },
+                scores: [],
+                comment: formData.get('comment')
+            };
+
+            // Collect 25 scores
+            for(let d=1; d<=5; d++) {
+                for(let q=1; q<=5; q++) {
+                    const val = formData.get(`D${d}_${q}`);
+                    payload.scores.push(parseInt(val));
+                }
+            }
+
+            toggleLoading(true);
+            
+            fetch(GAS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ op: 'submitSurvey', payload: payload })
+            })
+            .then(r => r.json())
+            .then(res => {
+                toggleLoading(false);
+                if(res.status === 'success') {
+                    Swal.fire({
+                        title: 'ขอบคุณ!',
+                        text: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        e.target.reset();
+                        document.querySelectorAll('.rating-btn.active').forEach(b => b.classList.remove('active'));
+                        showPage('dashboard');
+                        refreshData();
+                    });
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            })
+            .catch(err => {
+                toggleLoading(false);
+                Swal.fire('Error', 'Connection Failed', 'error');
+            });
+        }
+
+        function login(user, pass) {
+            toggleLoading(true);
+            fetch(GAS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ op: 'login', username: user, password: pass })
+            })
+            .then(r => r.json())
+            .then(res => {
+                toggleLoading(false);
+                if(res.status === 'success') {
+                    isLoggedIn = true;
+                    showPage('admin');
+                    updateAdminTable(globalData);
+                } else {
+                    Swal.fire('ผิดพลาด', 'Username/Password ไม่ถูกต้อง', 'error');
+                }
+            });
+        }
+
+        function logout() {
+            isLoggedIn = false;
+            showPage('dashboard');
+        }
+
+        function deleteResponse(id) {
+            Swal.fire({
+                title: 'ยืนยันการลบ?',
+                text: "ข้อมูลจะหายไปถาวร",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'ลบข้อมูล'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    toggleLoading(true);
+                    fetch(GAS_API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ op: 'deleteResponse', id: id })
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        toggleLoading(false);
+                        if(res.status === 'success') {
+                            Swal.fire('Deleted!', 'ลบข้อมูลเรียบร้อย', 'success');
+                            refreshData();
+                        }
+                    });
+                }
+            });
+        }
+
+        // --- Filter Logic (NEW) ---
+        function populateFilters(data) {
+            const getUnique = (key) => [...new Set(data.map(item => item[key]))].filter(x => x).sort();
+            
+            const genders = getUnique('Gender');
+            const clinics = getUnique('Clinic');
+            const rights = getUnique('RightType');
+            const freqs = getUnique('Frequency');
+            const occs = getUnique('Occupation');
+
+            const fillSelect = (id, list) => {
+                const select = document.getElementById(id);
+                const currentVal = select.value;
+                // Keep first option (All)
+                select.innerHTML = select.options[0].outerHTML;
+                list.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item;
+                    opt.innerText = item;
+                    select.appendChild(opt);
+                });
+                select.value = currentVal; 
+            };
+
+            fillSelect('filterGender', genders);
+            fillSelect('filterClinic', clinics);
+            fillSelect('filterRight', rights);
+            fillSelect('filterFreq', freqs);
+            fillSelect('filterOcc', occs);
+        }
+
+        function applyFilters() {
+            const gender = document.getElementById('filterGender').value;
+            const clinic = document.getElementById('filterClinic').value;
+            const right = document.getElementById('filterRight').value;
+            const freq = document.getElementById('filterFreq').value;
+            const occ = document.getElementById('filterOcc').value;
+
+            const filtered = globalData.filter(item => {
+                return (!gender || item.Gender === gender) &&
+                       (!clinic || item.Clinic === clinic) &&
+                       (!right || item.RightType === right) &&
+                       (!freq || item.Frequency === freq) &&
+                       (!occ || item.Occupation === occ);
+            });
+
+            updateDashboard(filtered);
+        }
+
+        function resetFilters() {
+            document.getElementById('filterGender').value = "";
+            document.getElementById('filterClinic').value = "";
+            document.getElementById('filterRight').value = "";
+            document.getElementById('filterFreq').value = "";
+            document.getElementById('filterOcc').value = "";
+            applyFilters();
+        }
+
+        // --- Dashboard Logic ---
+        let mainChartInstance = null;
+        let rightsChartInstance = null;
+        let genderChartInstance = null;
+        let clinicChartInstance = null;
+        let freqChartInstance = null;
+        let occChartInstance = null;
+
+        function updateDashboard(data) {
+            document.getElementById('totalRespondents').innerText = data.length;
+
+            if(data.length === 0) {
+                document.getElementById('overallScore').innerText = "-";
+                document.getElementById('maxSatisfaction').innerText = "-";
+                document.getElementById('maxSatisfactionTopic').innerText = "-";
+                // Optionally clear charts here if needed, but keeping old ones visible until data comes is fine for UX too.
+                // Or better: clear them to avoid confusion
+                 if(mainChartInstance) mainChartInstance.destroy();
+                 if(rightsChartInstance) rightsChartInstance.destroy();
+                 if(genderChartInstance) genderChartInstance.destroy();
+                 if(clinicChartInstance) clinicChartInstance.destroy();
+                 if(freqChartInstance) freqChartInstance.destroy();
+                 if(occChartInstance) occChartInstance.destroy();
+                 document.getElementById('demographicTable').innerHTML = "<tbody><tr><td class='text-center'>ไม่พบข้อมูลตามตัวกรอง</td></tr></tbody>";
+                return;
+            }
+            
+            // Calculate Scores
+            let dimScores = [0,0,0,0,0]; // Sum of each dimension
+            let dimCounts = [0,0,0,0,0]; // Count of questions
+            let totalSum = 0;
+            let totalCount = 0;
+
+            data.forEach(row => {
+                for(let d=0; d<5; d++) {
+                    for(let q=1; q<=5; q++) {
+                        const key = `D${d+1}_${q}`;
+                        const val = parseInt(row[key]) || 0;
+                        dimScores[d] += val;
+                        dimCounts[d]++;
+                        totalSum += val;
+                        totalCount++;
+                    }
+                }
+            });
+
+            const overallAvg = totalCount > 0 ? (totalSum / totalCount).toFixed(2) : "0.00";
+            document.getElementById('overallScore').innerText = overallAvg;
+
+            const dimAvgs = dimScores.map((s, i) => dimCounts[i] > 0 ? (s / dimCounts[i]).toFixed(2) : 0);
+            
+            const maxVal = Math.max(...dimAvgs);
+            const maxIndex = dimAvgs.indexOf(maxVal.toFixed(2));
+            document.getElementById('maxSatisfaction').innerText = maxVal.toFixed(2);
+            if(maxIndex >= 0) {
+                document.getElementById('maxSatisfactionTopic').innerText = dimensions[maxIndex].name;
+            }
+
+            // --- Aggregating Demographic Data ---
+            const counts = {
+                gender: {},
+                rights: {},
+                clinic: {},
+                freq: {},
+                occ: {}
+            };
+
+            data.forEach(r => {
+                counts.gender[r.Gender] = (counts.gender[r.Gender] || 0) + 1;
+                counts.rights[r.RightType] = (counts.rights[r.RightType] || 0) + 1;
+                counts.clinic[r.Clinic] = (counts.clinic[r.Clinic] || 0) + 1;
+                counts.freq[r.Frequency] = (counts.freq[r.Frequency] || 0) + 1;
+                counts.occ[r.Occupation] = (counts.occ[r.Occupation] || 0) + 1;
+            });
+
+            // --- Helper to Create Chart ---
+            const createChart = (id, instance, type, labels, values, bgColors, options = {}) => {
+                const ctx = document.getElementById(id).getContext('2d');
+                if(instance) instance.destroy();
+                return new Chart(ctx, {
+                    type: type,
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: bgColors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        ...options
+                    }
+                });
+            };
+
+            // 1. Main Bar Chart (Score)
+            mainChartInstance = createChart('mainChart', mainChartInstance, 'bar', 
+                dimensions.map(d => d.name.split(' ')[0] + ' ' + d.name.split(' ')[1]),
+                dimAvgs,
+                ['rgba(232, 62, 140, 0.7)', 'rgba(111, 66, 193, 0.7)', 'rgba(255, 193, 7, 0.7)', 'rgba(32, 201, 151, 0.7)', 'rgba(13, 202, 240, 0.7)'],
+                { 
+                    scales: { y: { beginAtZero: true, max: 5 } },
+                    plugins: { legend: { display: false } }
+                }
+            );
+
+            // 2. Gender (Small Pie)
+            genderChartInstance = createChart('genderChart', genderChartInstance, 'pie',
+                Object.keys(counts.gender),
+                Object.values(counts.gender),
+                ['#0d6efd', '#e83e8c', '#6f42c1']
+            );
+
+            // 3. Rights (Small Pie)
+            rightsChartInstance = createChart('rightsChart', rightsChartInstance, 'pie',
+                Object.keys(counts.rights),
+                Object.values(counts.rights),
+                ['#ffc107', '#20c997', '#0dcaf0', '#fd7e14']
+            );
+
+            // 4. Frequency (Bar)
+            freqChartInstance = createChart('freqChart', freqChartInstance, 'bar',
+                Object.keys(counts.freq),
+                Object.values(counts.freq),
+                'rgba(13, 202, 240, 0.7)',
+                { plugins: { legend: { display: false } } }
+            );
+
+            // 5. Clinic (Bar - Horizontal is better for names)
+            clinicChartInstance = createChart('clinicChart', clinicChartInstance, 'bar',
+                Object.keys(counts.clinic),
+                Object.values(counts.clinic),
+                'rgba(111, 66, 193, 0.7)',
+                { indexAxis: 'y', plugins: { legend: { display: false } } }
+            );
+
+            // 6. Occupation (Bar - Top 5)
+            const sortedOcc = Object.entries(counts.occ).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            occChartInstance = createChart('occChart', occChartInstance, 'bar',
+                sortedOcc.map(i => i[0]),
+                sortedOcc.map(i => i[1]),
+                'rgba(232, 62, 140, 0.7)',
+                { indexAxis: 'y', plugins: { legend: { display: false } } }
+            );
+
+            // 7. Table
+            updateDemographicTable(data);
+        }
+
+        function updateDemographicTable(data) {
+            // Helper function to count frequencies
+            const countFreq = (field) => {
+                const counts = {};
+                data.forEach(r => {
+                    const val = r[field] || 'ไม่ระบุ';
+                    counts[val] = (counts[val] || 0) + 1;
+                });
+                return counts;
+            };
+
+            const genders = countFreq('Gender');
+            const clinics = countFreq('Clinic');
+            const freqs = countFreq('Frequency');
+            const occupations = countFreq('Occupation');
+            
+            // Calculate Average Age
+            let totalAge = 0;
+            let ageCount = 0;
+            data.forEach(r => {
+                if(r.Age && !isNaN(r.Age)) {
+                    totalAge += parseInt(r.Age);
+                    ageCount++;
+                }
+            });
+            const avgAge = ageCount > 0 ? (totalAge / ageCount).toFixed(0) : '-';
+
+            // Generate Table HTML
+            let html = `<tbody class="align-middle">`;
+            
+            // Row 1: Gender & Age
+            html += `<tr class="table-secondary"><th colspan="3" class="text-primary fw-bold">1. ข้อมูลพื้นฐาน</th></tr>`;
+            html += `<tr>
+                <td width="30%" class="fw-bold text-muted">อายุเฉลี่ย</td>
+                <td colspan="2"><span class="badge bg-primary fs-6 rounded-pill">${avgAge} ปี</span></td>
+            </tr>`;
+            html += `<tr><td rowspan="${Object.keys(genders).length + 1}" class="fw-bold text-muted">เพศ</td></tr>`;
+            for (const [key, val] of Object.entries(genders)) {
+                html += `<tr><td>${key}</td><td class="text-end fw-bold">${val} คน</td></tr>`;
+            }
+
+            // Row 2: Clinic
+            html += `<tr class="table-secondary"><th colspan="3" class="text-primary fw-bold">2. แผนกที่ใช้บริการ</th></tr>`;
+            for (const [key, val] of Object.entries(clinics)) {
+                html += `<tr><td colspan="2">${key}</td><td class="text-end fw-bold">${val} คน</td></tr>`;
+            }
+
+            // Row 3: Frequency
+            html += `<tr class="table-secondary"><th colspan="3" class="text-primary fw-bold">3. ความถี่ในการรับบริการ</th></tr>`;
+            for (const [key, val] of Object.entries(freqs)) {
+                html += `<tr><td colspan="2">${key}</td><td class="text-end fw-bold">${val} คน</td></tr>`;
+            }
+
+            // Row 4: Top Occupations (Limit to Top 5 for neatness)
+            html += `<tr class="table-secondary"><th colspan="3" class="text-primary fw-bold">4. อาชีพ (5 อันดับแรก)</th></tr>`;
+            const sortedOcc = Object.entries(occupations).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            if(sortedOcc.length === 0) html += `<tr><td colspan="3" class="text-center">- ไม่มีข้อมูล -</td></tr>`;
+            sortedOcc.forEach(([key, val]) => {
+                html += `<tr><td colspan="2">${key}</td><td class="text-end fw-bold">${val} คน</td></tr>`;
+            });
+
+            html += `</tbody>`;
+            document.getElementById('demographicTable').innerHTML = html;
+        }
+
+        function updateAdminTable(data) {
+            const tbody = document.querySelector('#adminTable tbody');
+            tbody.innerHTML = '';
+            
+            // Sort by latest
+            const sortedData = [...data].reverse();
+
+            sortedData.forEach(row => {
+                // Calculate individual average
+                let sum = 0;
+                let count = 0;
+                for(let d=1; d<=5; d++){
+                    for(let q=1; q<=5; q++){
+                        sum += parseInt(row[`D${d}_${q}`]) || 0;
+                        count++;
+                    }
+                }
+                const avg = (sum/count).toFixed(2);
+                const date = new Date(row.Timestamp).toLocaleDateString('th-TH');
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${date}</td>
+                    <td>${row.Gender} / ${row.Age}</td>
+                    <td>${row.Clinic}</td>
+                    <td>${row.RightType}</td>
+                    <td><span class="badge bg-${avg >= 4 ? 'success' : 'warning'}">${avg}</span></td>
+                    <td><small>${row.Comment || '-'}</small></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteResponse('${row.ID}')">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- Export Word ---
+        function exportToWord() {
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
+                "xmlns:w='urn:schemas-microsoft-com:office:word' "+
+                "xmlns='http://www.w3.org/TR/REC-html40'>"+
+                "<head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title></head><body>";
+            
+            const footer = "</body></html>";
+            
+            // Clone dashboard content for export
+            // Note: Canvas charts won't export directly to Word easily via simple HTML blob without converting to IMG first.
+            // For simplicity in standalone, we export the text summary.
+            
+            let html = `
+                <h1 style="text-align: center;">สรุปผลความพึงพอใจ โรงพยาบาลเสลภูมิ</h1>
+                <p>วันที่ออกรายงาน: ${new Date().toLocaleDateString('th-TH')}</p>
+                <hr>
+                <h3>สถิติภาพรวม</h3>
+                <p>จำนวนผู้ตอบแบบสอบถาม: ${document.getElementById('totalRespondents').innerText} คน</p>
+                <p>คะแนนเฉลี่ยรวม: ${document.getElementById('overallScore').innerText} / 5.00</p>
+                <hr>
+                <h3>ข้อมูลส่วนบุคคล</h3>
+                ${document.getElementById('demographicTable').outerHTML}
+                <br>
+                <p style="text-align:center; color:gray;">(กราฟและแผนภูมิไม่สามารถ Export โดยตรง กรุณาใช้การ Capture หน้าจอหากต้องการกราฟ)</p>
+            `;
+
+            const sourceHTML = header+html+footer;
+            
+            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            fileDownload.download = 'รายงานความพึงพอใจ_รพ_เสลภูมิ.doc';
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
+        }
+
+        function toggleLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+    </script>
+</body>
+</html>
